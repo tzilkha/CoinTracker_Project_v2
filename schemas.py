@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+# pydantic schemas
 
 class UserBase(BaseModel):
     username: str
@@ -14,8 +15,6 @@ class User(UserBase):
     class Config:
         orm_mode = True
 
-
-
 class WalletBase(BaseModel):
     address: str
     last_sync: int
@@ -25,9 +24,6 @@ class Wallet(WalletBase):
 
     class Config:
         orm_mode = True
-
-
-
 
 class AssociationBase(BaseModel):
     address: str
@@ -40,8 +36,6 @@ class Association(AssociationBase):
 
     class Config:
         orm_mode = True
-
-
 
 class TransactionBase(BaseModel):
     tx_hash: str
@@ -64,19 +58,4 @@ class Transaction(TransactionBase):
         orm_mode = True
 
 
-
-
-
-# class ValueTransfer(BaseModel):
-#     inp: Address
-#     outp: Address
-#     value: int
-
-# class Transaction(BaseModel):
-#     tx_hash: str
-
-# class TransactionCreate(Transaction):
-#     time: int
-#     block_height: int
-#     transfers: List[ValueTransfer] = []
     
