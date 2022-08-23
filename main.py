@@ -1,6 +1,6 @@
 """
 
-Server-side API
+Server-side APIs
 This file describes the methods to call to get the data needed from backend APIs.
 
 """
@@ -69,14 +69,15 @@ async def delete_user(username: str, db: Session = Depends(get_db)):
     if db_user == None:
         raise HTTPException(status_code=400, detail="No user with such Username!")
 
-    await UserRepo.delete(db=db, username=username)
 
 
     # We need to delete wallet associations
-    db_associations = AssociationRepo.fetch_by_username(db, username=username)
-    if db_user:
+    db_associations = AssociationRepo.fetch_all_addresses(db, username=username)
+    if db_associations:
         await AssociationRepo.delete_by_user(db=db, username=username)
 
+    # Delete the user
+    await UserRepo.delete(db=db, username=username)
 
     return "User deleted successfully! (" + username + ")."
 

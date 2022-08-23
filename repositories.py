@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 import models, schemas
 
+# Database Calls
 
 class UserRepo:
     
@@ -92,7 +93,7 @@ class AssociationRepo:
 
     async def delete_by_user(db: Session, username):
         db_association = db.query(models.UserAddress).filter(models.UserAddress.username == username).all()
-        db.delete(db_association)
+        map(db.delete, db_association)
         db.commit()
 
 
