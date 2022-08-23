@@ -3,9 +3,6 @@
 08/22/22
 Tal Zilkha
 
-## Setup
-
-
 ## Architecture and Assumptions
 
 We will be creating a database to hold all infromation on users, addresses, user-address relations and transactions that we are storing.
@@ -57,7 +54,7 @@ The Transaction table will keep track of transaction hashes and some useful info
 <tx_hash> <total_val> <time> <block>
 
 
-### Value Transfer table (relationship table)
+### Value Transfer table
 
 The Value Transfer table keeps track of the participation of the addresses within a transaction, that is their address and value gained or loss.
 
@@ -67,30 +64,103 @@ The Value Transfer table keeps track of the participation of the addresses withi
 
 ## Server-side API
 
-USER
+### USER
 
-POST create_user
-DELETE delete_user
-GET get_user
-GET get_all_users
+POST create_user [Complete]
+
+This API call will take in a username and a name. If that username is not taken, it will create a new user entry with the given information.
+
+DELETE delete_user [Complete]
+
+This API call will take in a username and delete the corresponding entry for it. Additionally,
+it will delete all association information to tracked wallets.
+
+GET user [Incomplete]
+
+This API call will return user information based on username. Not critical for the purposes of this demo.
+
+GET all_users [Complete]
+
+This API call returns the information on all the users. More advanced querys and API calls can be generated but this API call is more of a debugging tool than anything.
+
+### WALLET
+
+POST add_wallet [Complete]
+
+This API call adds a wallet, it takes in an address and a username. If a wallet entry is not created for this address (the wallet is not yet tracked), it instantiates one, and sets the transaction number and last updated  time to 0. The call then associates the wallet to the username if it isn't already.
+
+DELETE remove_wallet [Complete]
+
+This API call removes an association between a wallet and a user. It takes a wallet and a user as parameters.
+
+GET query_wallets [Complete]
+
+This API call returns all the wallets given a username. All the wallets that are associated to that user, that is.
+
+GET get_users_by_wallet [Complete]
+
+This API call returns all usernames associated to a given wallet address. This is more of an admin API call.
 
 
-WALLET
+### UPDATE
+These are scraping API calls.
 
-POST add_wallet
-DELETE remove_wallet
-GET get_wallets_by_user
-GET get_users_by_wallet
+POST update [Complete]
 
-GET wallet_transactions
+This API call will update transactional informaiton of a given address to the database. Since we keep note of the amount of transactions stored for a given wallet, we only search for results post those transactions and update.
+
+POST update_user_wallets [Complete]
+
+This API call will go through all the wallet addresses associated with the given username and update transactional information for them.
+
+### TRANSACTION
+
+GET transaction [Complete]
+
+This API call returns all transactional information of a given transaction hash. That is, the general information of the transaction and also the value transfer information.
+
+DELETE transaction [Incomplete]
+
+This API call deletes a transaction and its corresponding value transfer information.
+
+GET get_wallet_transactions [Complete]
+
+This API call returns all transactional information given a username. This includes the transaction information as well as value transfer information of those transactions. The call find the associated wallets of that user and then one by one checks which transactions contain these addresses and then find the complete transaction information for those transactions.
+
+This is a lot of data so offseting and limiting results is a must.
 
 
 
-UPDATE
+## Usage
 
-POST update_wallet
-POST update_user_wallets
+The project was done in a virtual environment that is made easy to replicate.
 
+(This assumes git clone was done first, in that directory...)
+
+1. Create a virtual environment
+
+	# If machine doesn't have virtualenv
+	pip3 install virtualenv
+
+	# Create environment
+  	virtualenv tz_project source tz_project/venv/bin/activate
+
+2. Install dependencies
+
+	pip3 -r requirements.txt
+
+3. Run main to initialize DB and run API server
+
+	python3 main.py
+
+4. Look at the API documentation
+
+	at - http://localhost:9000/docs#/
+
+	# This is also a playground to play with the API. Of course curl calls can be made for more automatic testing, curl calls can be copied straight from documentation.
+
+
+## Afterthoughts
 
 
 
