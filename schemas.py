@@ -18,13 +18,7 @@ class User(UserBase):
 class UserDelete(BaseModel):
     username: str
 
-class UsersQuery(BaseModel):
-    address: str
-
 class UserUpdate(UserDelete):
-    pass
-
-class UserTransactions(UserDelete):
     pass
 
 class WalletBase(BaseModel):
@@ -38,14 +32,12 @@ class WalletAdd(WalletBase):
     class Config:
         orm_mode = True
 
-class WalletsQuery(BaseModel):
+class WalletRemove(BaseModel):
+    address: str
     username: str
 
-class WalletRemove(UsersQuery, UserDelete):
-    pass
-
-class WalletUpdate(UsersQuery):
-    pass
+class WalletUpdate(BaseModel):
+    address: str
 
 class Wallet(WalletBase):
 
@@ -85,9 +77,6 @@ class Transaction(TransactionBase):
 
     class Config:
         orm_mode = True
-
-class TransactionGet(BaseModel):
-    tx_hash: str
 
 
     

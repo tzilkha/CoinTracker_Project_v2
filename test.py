@@ -201,7 +201,7 @@ data = {
 }
 
 print('-- Getting wallets of {}.'.format(data['username']))
-response = req.get(base_url + '/wallets/query_wallets', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_wallets?username=' + data['username'], headers=headers)
 
 expected = [{'address': ADD2, 'last_sync': 0, 'n_txs': 0}, {'address': ADD3, 'last_sync': 0, 'n_txs': 0}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -211,7 +211,7 @@ data = {
 }
 
 print('-- Getting wallets of {}.'.format(data['username']))
-response = req.get(base_url + '/wallets/query_wallets', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_wallets?username=' + data['username'], headers=headers)
 
 expected = [{'address': ADD1, 'last_sync': 0, 'n_txs': 0}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -221,7 +221,7 @@ data = {
 }
 
 print('-- Getting wallets of {}.'.format(data['username']))
-response = req.get(base_url + '/wallets/query_wallets', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_wallets?username=' + data['username'], headers=headers)
 
 expected = [{'address': ADD1, 'last_sync': 0, 'n_txs': 0}, {'address': ADD2, 'last_sync': 0, 'n_txs': 0}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -236,7 +236,7 @@ data = {
 }
 
 print('-- Getting users with address {}.'.format(data['address']))
-response = req.get(base_url + '/wallets/query_users', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_users?address=' + data['address'], headers=headers)
 
 expected = [{'username': 'user_1', 'name': 'user_1_name'}, {'username': 'user_2', 'name': 'user_2_name'}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -246,7 +246,7 @@ data = {
 }
 
 print('-- Getting users with address {}.'.format(data['address']))
-response = req.get(base_url + '/wallets/query_users', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_users?address=' + data['address'], headers=headers)
 
 expected = [{'username': 'user_1', 'name': 'user_1_name'}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -256,7 +256,7 @@ data = {
 }
 
 print('-- Getting users with address {}.'.format(data['address']))
-response = req.get(base_url + '/wallets/query_users', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_users?address=' + data['address'], headers=headers)
 
 expected = [{'username': 'user_3', 'name': 'user_3_name'}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -286,7 +286,7 @@ data = {
 }
 
 print('-- Getting wallets of {}.'.format(data['username']))
-response = req.get(base_url + '/wallets/query_wallets', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_wallets?username=' + data['username'], headers=headers)
 
 expected = [{'address': ADD2, 'last_sync': 0, 'n_txs': 0}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -301,7 +301,7 @@ data = {
 }
 
 print('-- Getting users with address {}.'.format(data['address']))
-response = req.get(base_url + '/wallets/query_users', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_users?address=' + data['address'], headers=headers)
 
 expected = [{'username': 'user_2', 'name': 'user_2_name'}]
 assert [i for i in expected if i not in res_content(response)] == []
@@ -370,14 +370,14 @@ assert (res_content(response) == {'detail':"Address not tracked!"})
 
 # Lets update address 1
 
-data = {
-	'address': ADD1,
-}
+# data = {
+# 	'address': ADD1,
+# }
 
-print('-- Updating address {}.'.format(data['address']))
-response = req.post(base_url + '/wallets/update', headers=headers, json=data)
+# print('-- Updating address {}.'.format(data['address']))
+# response = req.post(base_url + '/wallets/update', headers=headers, json=data)
 
-assert (res_content(response) == "Successfully updated {}. Number of transactions: {}. Current Balance: {}.".format(ADD1, 1275, 19339265))
+# res_print(response)
 
 
 
@@ -389,12 +389,11 @@ data = {
 }
 
 print('-- Getting wallets of {}.'.format(data['username']))
-response = req.get(base_url + '/wallets/query_wallets', headers=headers, json=data)
+response = req.get(base_url + '/wallets/query_wallets?username=' + data['username'], headers=headers)
 
-expected = [{'address': ADD1, 'n_txs': 1275}]
-no_time_sync = [{'address': r['address'], 'n_txs': r['n_txs']} for r in res_content(response)]
+res_print(response)
 
-assert [i for i in expected if i not in no_time_sync] == []
+
 
 
 # Lets update addresses for user 1
@@ -419,9 +418,9 @@ data = {
 }
 
 print('-- Getting transactions of {}.'.format(data['username']))
-response = req.get(base_url + '/transactions/get_user_transactions', headers=headers, json=data)
+response = req.get(base_url + '/transactions/get_user_transactions?username=' + data['username'], headers=headers)
 
-print(res_content(response))
+res_print(response)
 
 
 
