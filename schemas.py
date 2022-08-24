@@ -15,10 +15,37 @@ class User(UserBase):
     class Config:
         orm_mode = True
 
+class UserDelete(BaseModel):
+    username: str
+
+class UsersQuery(BaseModel):
+    address: str
+
+class UserUpdate(UserDelete):
+    pass
+
+class UserTransactions(UserDelete):
+    pass
+
 class WalletBase(BaseModel):
     address: str
     last_sync: int
     n_txs: int
+
+class WalletAdd(WalletBase):
+    username: str
+
+    class Config:
+        orm_mode = True
+
+class WalletsQuery(BaseModel):
+    username: str
+
+class WalletRemove(UsersQuery, UserDelete):
+    pass
+
+class WalletUpdate(UsersQuery):
+    pass
 
 class Wallet(WalletBase):
 
@@ -42,11 +69,13 @@ class TransactionBase(BaseModel):
     time: int
     block_height: int
 
-class ValueTransfer(BaseModel):
-    transfer_id: int
+class ValueTransferUndigested(BaseModel):
     tx_hash: str
     address: str
     value: int
+
+class ValueTransfer(ValueTransferUndigested):
+    transfer_id: int
 
     class Config:
         orm_mode = True
@@ -56,6 +85,9 @@ class Transaction(TransactionBase):
 
     class Config:
         orm_mode = True
+
+class TransactionGet(BaseModel):
+    tx_hash: str
 
 
     

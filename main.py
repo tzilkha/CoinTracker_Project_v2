@@ -61,29 +61,29 @@ def get_all_users(db: Session = Depends(get_db)):
 # Delete a user
 
 @app.delete('/users/remove_user', tags=["User"], status_code=200)
-async def delete_user(username: str, db: Session = Depends(get_db)):
+async def delete_user(user_request: schemas.UserDelete, db: Session = Depends(get_db)):
     """
     Delete a user by username
     """
-    db_user = UserRepo.fetch_by_username(db, username=username)
+    db_user = UserRepo.fetch_by_username(db, username=user_request.username)
     if db_user == None:
         raise HTTPException(status_code=400, detail="No user with such Username!")
 
 
 
     # We need to delete wallet associations
-    db_associations = AssociationRepo.fetch_all_addresses(db, username=username)
+    db_associations = AssociationRepo.fetch_all_addresses(db, username=user_request.username)
     if db_associations:
-        await AssociationRepo.delete_by_user(db=db, username=username)
+        await AssociationRepo.delete_by_user(db=db, username=user_request.username)
 
     # Delete the user
-    await UserRepo.delete(db=db, username=username)
+    await UserRepo.delete(db=db, username=user_request.username)
 
-    return "User deleted successfully! (" + username + ")."
+    return "User deleted successfully! (" + user_request.username + ")."
 
 # Associate a wallet
 
-@app.post('/wallets/add_wallet', tags=["Wallet"], status_code=201)
+@app.post('/wallets/add_wallet', tags=["Wallet"], response_model = schemas.WalletAdd, status_code=201)
 async def add_address(user_request: schemas.AssociationCreate, db: Session = Depends(get_db)):
     """
     Create a user and store it in the database
@@ -96,108 +96,117 @@ async def add_address(user_request: schemas.AssociationCreate, db: Session = Dep
     if db_user == None:
         raise HTTPException(status_code=400, detail="Can't associate, user doesn't exist!")
 
-
-    response = ""
-
+    # Check if wallet exists
     db_wallet = WalletRepo.fetch_by_address(db=db, address=user_request.address)
 
     # Wallet doesn't exist
     if db_wallet == None:
+
+        # Create wallet and association
         await WalletRepo.create_wallet(db=db, address=user_request.address)
-        response += "Added wallet {} to the system.".format(user_request.address)
-
-    else:
-        response += "Wallet {} is already in the system.".format(user_request.address)
-
-    db_association = AssociationRepo.fetch_association(db=db, address=user_request.address, username=user_request.username)
-
-    # Association doesn't exist
-    if db_association == None:
         await AssociationRepo.create_association(db=db, address=user_request.address, username=user_request.username)
 
-        return response + " Associated {} to {}".format(user_request.address, user_request.username)
+        return schemas.WalletAdd(username=user_request.username, address=user_request.address, last_sync=0, balance=0, n_txs=0)
 
+    # Wallet exists
     else:
-        raise HTTPException(status_code=400, detail = response + " Wallet {} already associated with {}!".format(user_request.address, 
-            user_request.username))
+
+        # Lets check if the association exists
+        db_association = AssociationRepo.fetch_association(db=db, address=user_request.address, username=user_request.username)
+
+        # Association doesn't exist so we create one
+        if db_association == None:
+            await AssociationRepo.create_association(db=db, address=user_request.address, username=user_request.username)
+
+            return schemas.WalletAdd(address=user_request.address, last_sync=0, balance=0, n_txs=0, username=user_request.username)
+
+        # Association exists so we can't add it again
+        else:
+            raise HTTPException(status_code=400, detail = " Wallet {} already associated with {}!".format(user_request.address, 
+                user_request.username))
 
 # Get all wallets of a user
 
 @app.get('/wallets/query_wallets', tags=["Wallet"], response_model=List[schemas.Wallet], status_code=200)
-def get_all_wallets(username: str, db: Session = Depends(get_db)):
+def get_all_wallets(user_request: schemas.WalletsQuery, db: Session = Depends(get_db)):
     """
     Get all wallets associated with a username
     """
     # Check user exists first
-    db_user = UserRepo.fetch_by_username(db, username=username)
+    db_user = UserRepo.fetch_by_username(db, username=user_request.username)
     if db_user == None:
         raise HTTPException(status_code=400, detail="Username doesn't exist!")
 
     # Convert associations to wallets
-    addresses = [entry.address for entry in AssociationRepo.fetch_all_addresses(db=db, username=username)]
+    addresses = [entry.address for entry in AssociationRepo.fetch_all_addresses(db=db, username=user_request.username)]
     return WalletRepo.fetch_by_addresses(db, addresses = addresses)
 
 # Get all users associated with a wallet
 
 @app.get('/wallets/query_users', tags=["Wallet"], response_model=List[schemas.User], status_code=200)
-def get_all_users(address: str, db: Session = Depends(get_db)):
+def get_all_users(user_request: schemas.UsersQuery, db: Session = Depends(get_db)):
     """
     Get all users associated with a wallet
     """
     # Check wallet first
-    db_user = WalletRepo.fetch_by_address(db, address=address)
+    print(user_request)
+
+    db_user = WalletRepo.fetch_by_address(db, address=user_request.address)
     if db_user == None:
         raise HTTPException(status_code=400, detail="Address not tracked!")
 
     # Convert associations to users
-    users = [entry.address for entry in AssociationRepo.fetch_all_addresses(db=db, username=username)]
+    users = [entry.username for entry in AssociationRepo.fetch_all_usernames(db=db, address=user_request.address)]
+    print(users)
     return UserRepo.fetch_by_usernames(db, usernames = users)
 
 # Delete an association
 
 @app.delete('/wallets/remove', tags=["Wallet"], status_code=200)
-async def remove_wallet(username: str, address: str, db: Session = Depends(get_db)):
+async def remove_wallet(user_request:schemas.WalletRemove, db: Session = Depends(get_db)):
     """
     Delete an association
     """
     # Check wallet first
-    db_wallet = WalletRepo.fetch_by_address(db, address=address)
+    db_wallet = WalletRepo.fetch_by_address(db, address=user_request.address)
     if db_wallet == None:
         raise HTTPException(status_code=400, detail="Address not tracked!")
 
     # Check user exists first
-    db_user = UserRepo.fetch_by_username(db, username=username)
+    db_user = UserRepo.fetch_by_username(db, username=user_request.username)
     if db_user == None:
         raise HTTPException(status_code=400, detail="Username doesn't exist!")
 
 
     # Remove association if exists
-    db_association = AssociationRepo.fetch_association(db=db, address=address, username=username)
+    db_association = AssociationRepo.fetch_association(db=db, address=user_request.address, 
+        username=user_request.username)
     if db_association == None:
-        raise HTTPException(status_code=400, detail="{} not associated with {}.".format(address, username))
+        raise HTTPException(status_code=400, detail="{} not associated with {}.".format(user_request.address, 
+            user_request.username))
 
     else:
-        await AssociationRepo.delete_association(db=db, username=username, address=address)
+        await AssociationRepo.delete_association(db=db, username=user_request.username, address=user_request.address)
 
-    return "{} removed successfully from {}!".format(address, username)
+    return "{} removed successfully from {}!".format(user_request.address, user_request.username)
 
 # Update wallet
 
 @app.post('/wallets/update', tags=["Update"], status_code=201)
-async def update_wallet(address: str, db: Session = Depends(get_db)):
+async def update_wallet(user_request: schemas.WalletUpdate, db: Session = Depends(get_db)):
     import time
     LIMIT = 100
     DELAY = 11
 
     # Check wallet has been created in the first place for tracking
-    db_wallet = WalletRepo.fetch_by_address(db, address=address)
+    db_wallet = WalletRepo.fetch_by_address(db, address=user_request.address)
     if db_wallet == None:
         raise HTTPException(status_code=400, detail="Address not tracked!")
 
     last_sync = db_wallet.last_sync
     last_n_txs = db_wallet.n_txs
 
-    print("Last Synced {} at {} with {} txs".format(address, last_sync, last_n_txs))
+    print("Last Synced {} at {} with {} txs".format(user_request.address, last_sync, last_n_txs))
 
     # Instead of doing the get all function, lets
 
@@ -209,7 +218,10 @@ async def update_wallet(address: str, db: Session = Depends(get_db)):
     while not got_all:
 
         # Scrape a page
-        txs = get_txs(address, offset = new_n_txs, limit = LIMIT)
+        txs = get_txs(user_request.address, offset = new_n_txs, limit = LIMIT)
+
+        if txs == None:
+            raise HTTPException(status_code=400, detail="Scraping error!")
 
         # We already know the current final balance of the account
         new_balance = txs['final_balance']
@@ -237,7 +249,7 @@ async def update_wallet(address: str, db: Session = Depends(get_db)):
                 print("Inserting {} value transfers.".format(len(v_t)))
                 # Insert value transfer information
                 for vt in v_t:
-                    await TransactionRepo.create_value_transfer(db, schemas.ValueTransfer(**vt))
+                    await TransactionRepo.create_value_transfer(db, schemas.ValueTransferUndigested(**vt))
 
                 # Moving count of n_txs
                 new_n_txs += 1
@@ -245,9 +257,9 @@ async def update_wallet(address: str, db: Session = Depends(get_db)):
                 # Update the wallet information
                 print("Updating wallet information.")
                 new_sync = int(time.time())
-                await WalletRepo.update_n_txs(db, address=address, n_txs=new_n_txs)
-                await WalletRepo.update_balance(db, address=address, balance=new_balance)
-                await WalletRepo.update_sync_time(db, address=address, time=new_sync)
+                await WalletRepo.update_n_txs(db, address=user_request.address, n_txs=new_n_txs)
+                await WalletRepo.update_balance(db, address=user_request.address, balance=new_balance)
+                await WalletRepo.update_sync_time(db, address=user_request.address, time=new_sync)
 
         # End condition otherwise sleep (cos blockchain.com API)
         if len(txs['txs']) < LIMIT: got_all = True
@@ -258,57 +270,57 @@ async def update_wallet(address: str, db: Session = Depends(get_db)):
 
     # As a safe in case nothing new came in, we still update the sync time
     new_sync = int(time.time())
-    await WalletRepo.update_sync_time(db, address=address, time=new_sync)
+    await WalletRepo.update_sync_time(db, address=user_request.address, time=new_sync)
 
-    return "Successfully upated {}. Number of transactions: {}. Current Balance: {}.".format(address, 
+    return "Successfully updated {}. Number of transactions: {}. Current Balance: {}.".format(user_request.address, 
         new_n_txs, new_balance)
 
 # Update all user's wallets
 
 @app.post('/wallets/update_user_wallets', tags=["Update"], status_code=201)
-async def update_user_wallets(username: str, db: Session = Depends(get_db)):
+async def update_user_wallets(user_request: schemas.UserUpdate, db: Session = Depends(get_db)):
 
     # Get users wallets
-    wallets = get_all_wallets(username, db)
+    wallets = get_all_wallets(user_request, db)
     
     # update them
     for w in wallets:
-        await update_wallet(w.address, db)
+        await update_wallet(schemas.WalletUpdate(address=w.address), db)
 
-    return "Successfully updated {} wallets for user {}. {}".format(len(wallets), username, [w.address for w in wallets])
+    return "Successfully updated {} wallets for user {}. {}".format(len(wallets), user_request.username, [w.address for w in wallets])
 
 # Get transaction information
 
 @app.get('/transactions/get_transaction', response_model=schemas.Transaction, tags=["Transaction"], status_code=200)
-async def get_transaction(tx_hash: str, db: Session = Depends(get_db)):
+async def get_transaction(user_request: schemas.TransactionGet, db: Session = Depends(get_db)):
 
     # First check we recorded this transaction
-    db_transaction = TransactionRepo.get_transaction(db, tx_hash=tx_hash)
+    db_transaction = TransactionRepo.get_transaction(db, tx_hash=user_request.tx_hash)
     if db_transaction == None:
         raise HTTPException(status_code=400, detail="This transaction is not recorded!")
 
     db_transaction = db_transaction.__dict__
 
     # Lets get the value transfers for this transaction
-    db_value_transfers = TransactionRepo.get_value_transfers(db, tx_hash=tx_hash)
+    db_value_transfers = TransactionRepo.get_value_transfers(db, tx_hash=user_request.tx_hash)
 
     return schemas.Transaction(**{**db_transaction, 'value_transfers':db_value_transfers})
 
 # Get transaction information for wallet
 
 @app.get('/transactions/get_user_transactions', response_model=List[schemas.Transaction], tags=["Transaction"], status_code=200)
-async def get_user_transactions(username: str, offset: int = 0, db: Session = Depends(get_db)):
+async def get_user_transactions(user_request: schemas.UserTransactions, offset: int = 0, db: Session = Depends(get_db)):
 
     # Last transactions (since this is a lot of information)
     LIMIT = 50
 
     # Check user exists first
-    db_user = UserRepo.fetch_by_username(db, username=username)
+    db_user = UserRepo.fetch_by_username(db, username=user_request.username)
     if db_user == None:
         raise HTTPException(status_code=400, detail="Username doesn't exist!")
 
     # Convert associations to wallets
-    addresses = [entry.address for entry in AssociationRepo.fetch_all_addresses(db=db, username=username)]
+    addresses = [entry.address for entry in AssociationRepo.fetch_all_addresses(db=db, username=user_request.username)]
 
     tx_hashes = []
 
@@ -322,7 +334,7 @@ async def get_user_transactions(username: str, offset: int = 0, db: Session = De
     tx_hashes = tx_hashes[max(0, len(tx_hashes) - offset - LIMIT) : max(len(tx_hashes), len(tx_hashes) - offset)]
 
     # Get transaction information including value transfers for each hash
-    return [await get_transaction(h, db) for h in tx_hashes]
+    return [await get_transaction(schemas.TransactionGet(tx_hash=h), db) for h in tx_hashes]
 
 
 

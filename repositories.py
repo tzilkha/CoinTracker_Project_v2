@@ -105,8 +105,10 @@ class TransactionRepo:
         db.refresh(db_transaction)
         return db_transaction
 
-    async def create_value_transfer(db: Session, value_transfer: schemas.ValueTransfer):
-        db_value_transfer = models.ValueTransfer(tx_hash=value_transfer.tx_hash, address=value_transfer.address, value=value_transfer.value)
+    async def create_value_transfer(db: Session, value_transfer: schemas.ValueTransferUndigested):
+        next_id = db.query(models.ValueTransfer).count()
+        db_value_transfer = models.ValueTransfer(transfer_id = next_id, tx_hash=value_transfer.tx_hash, 
+            address=value_transfer.address, value=value_transfer.value)
         db.add(db_value_transfer)
         db.commit()
         db.refresh(db_value_transfer)
