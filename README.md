@@ -1,4 +1,4 @@
-# CoinTracker_Project
+# WalletTracker
 
 08/22/22
 Tal Zilkha
